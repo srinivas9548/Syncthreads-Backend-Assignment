@@ -50,6 +50,24 @@ const db = new sqlite3.Database(dbPath, sqlite3.OPEN_READWRITE | sqlite3.OPEN_CR
                 };
             }
         );
+
+        db.run(
+            `CREATE TABLE IF NOT EXISTS maps (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                country_name TEXT UNIQUE NOT NULL,
+                latitude REAL NOT NULL,
+                longitude REAL NOT NULL,
+                zoom INTEGER NOT NULL
+            )`,
+            (err) => {
+                if (err) {
+                    console.error("Error creating maps table:", err.message);
+                } else {
+                    console.log("Maps table is ready.");
+                }
+            }
+        );
+
     });
 });
 
@@ -128,12 +146,14 @@ app.get("/api/dashboard", authenticateToken, (request, response) => {
 
 app.get("/api/map/", authenticateToken, (request, response) => {
     try {
-        const mapData = {
-            center: { lat: 20.5937, lng: 78.9629 }, // Center of India
-            zoom: 5, // Default zoom level
-            mapType: "roadmap",
-        };
-        response.status(200).json(mapData);
+        const getMapsQuery = `SELECT * FROM maps;`;
+        db.all(getMapsQuery, [], (error, mapsData) => {
+            if (error) {
+                response.status(500).json({ error_msg: "Database error" });
+                return;
+            }
+            response.status(200).json(mapsData);
+        })
     } catch (error) {
         response.status(500).json({ error_msg: "Internal Server Error" });
     }
